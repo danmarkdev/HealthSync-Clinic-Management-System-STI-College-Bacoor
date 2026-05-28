@@ -13,7 +13,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
     <!-- Single Combined Stylesheet -->
-    <link rel="style.css">
+    <link rel="stylesheet" href="style.css">
 
     <!-- EmailJS + Page Router -->
     <script>
@@ -857,7 +857,7 @@
         var fd = new FormData();
         fd.append('regName', name); fd.append('regPosition', position);
         fd.append('regEmail', email); fd.append('regPassword', password);
-        fetch('../PHP%20DATABASE/register%20process.php', { method:'POST', body:fd })
+        fetch('register_process.php', { method:'POST', body:fd })
         .then(r => r.json())
         .then(data => {
             if (data.status === 'success') { if (sucEl) sucEl.style.display = 'flex'; setTimeout(() => switchTab('login'), 1500); }
@@ -883,7 +883,7 @@
         if (!token) { _showState('invalid'); }
         else {
             var fd2 = new FormData(); fd2.append('token', token);
-            fetch('../PHP%20DATABASE/validate_reset_token.php', { method:'POST', body:fd2 })
+            fetch('validate_reset_token.php', { method:'POST', body:fd2 })
             .then(r => r.json())
             .then(data => { if (data.status === 'success') { _activeToken = token; _showState('form'); } else { _showState('invalid'); } })
             .catch(() => _showState('invalid'));
@@ -900,7 +900,7 @@
             if (np !== cp)     { sa('Passwords do not match.'); return; }
             if (!_activeToken) { sa('Reset session expired. Please request a new reset link.'); return; }
             var fd3 = new FormData(); fd3.append('token', _activeToken); fd3.append('newPassword', np);
-            fetch('../PHP%20DATABASE/update_user_password.php', { method:'POST', body:fd3 })
+            fetch('update_user_password.php', { method:'POST', body:fd3 })
             .then(r => r.json())
             .then(data => { if (data.status === 'success') { _showState('success'); setTimeout(goToLogin, 2500); } else { sa('❌ ' + data.message); } })
             .catch(() => sa('❌ Server connection failed.'));
@@ -910,10 +910,9 @@
 </script>
 
 <!-- Single Combined Script -->
-<script src="../JAVA%20SCRIPT/script.js"></script>
+<script src="script.js"></script>
 
 </body>
 </html>
-
 
 
