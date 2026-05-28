@@ -1,7 +1,3 @@
-
-
-
-
 /* ============================================================
    HEALTHSYNC — Combined JavaScript
    Sections: Registration/Login, Reset Password, Dashboard
@@ -40,7 +36,7 @@ window.addEventListener('load', function () {
 
     // Already logged in → go to dashboard
     if (sessionStorage.getItem('userSession')) {
-        window.location.href = 'index.html';
+        window.location.href = 'clinic%20dashboard.html';
         return;
     }
 });
@@ -272,7 +268,7 @@ function completeLoginSession(account, remember, email) {
     // Session is only created here AFTER OTP verification
     sessionStorage.setItem('userSession', JSON.stringify(session));
     document.getElementById('loginSuccess').style.display = 'flex';
-    setTimeout(function () { window.location.href = 'index.html'; }, 1000);
+    setTimeout(function () { window.location.href = 'clinic%20dashboard.html'; }, 1000);
 }
 
 function doLogin() {
@@ -294,7 +290,7 @@ function doLogin() {
     formData.append('loginEmail', email);
     formData.append('loginPassword', password);
 
-    fetch('../PHP%20DATABASE/login%20process.php', {
+    fetch('login_process.php', {
         method: 'POST',
         body: formData
     })
@@ -469,7 +465,7 @@ function doForgot() {
     showForgotMsg('📨 Checking email and generating reset link...', 'info');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...'; }
 
-    fetch('../PHP%20DATABASE/request_password_reset.php', {
+    fetch('request_password_reset.php', {
         method: 'POST',
         body: formData
     })
@@ -547,7 +543,7 @@ function doResetPassword() {
     formData.append('token', activeResetToken);
     formData.append('newPassword', newPass);
 
-    fetch('../PHP%20DATABASE/update_user_password.php', {
+    fetch('update_user_password.php', {
         method: 'POST',
         body: formData
     })
@@ -563,7 +559,7 @@ function doResetPassword() {
                 msgEl.style.border = '1px solid #b2e4c9';
             }
             // Siguradong babalik sa login tab
-            setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+            setTimeout(() => { window.location.href = 'clinic%20registration.html'; }, 2000);
         } else {
             showErr('❌ ' + data.message);
         }
@@ -625,7 +621,7 @@ window.addEventListener('load', function () {
     var formData = new FormData();
     formData.append('token', token);
 
-    fetch('../PHP%20DATABASE/validate_reset_token.php', {
+    fetch('validate_reset_token.php', {
         method: 'POST',
         body: formData
     })
@@ -685,7 +681,7 @@ function doResetPassword() {
     formData.append('token', activeToken);
     formData.append('newPassword', newPass);
 
-    fetch('../PHP%20DATABASE/update_user_password.php', {
+    fetch('update_user_password.php', {
         method: 'POST',
         body: formData
     })
@@ -759,7 +755,7 @@ function hideAlert() {
 
 // ── Go back to login ───────────────────────────────────────
 function goToLogin() {
-    window.location.href = 'index.html';
+    window.location.href = 'clinic%20registration.html';
 }
 
 /* ============================================================
@@ -781,7 +777,7 @@ function goToLogin() {
 // ── Auth guard ─────────────────────────────────────────────
 (function () {
     var session = sessionStorage.getItem('userSession');
-    if (!session) window.location.replace('index.html');
+    if (!session) window.location.replace('clinic%20registration.html');
 })();
 
 // ── Sign out ─────────────────────────────────────────────────
@@ -789,7 +785,7 @@ function signOut() {
     if (!confirm('Sign out of HealthSync?')) return;
     sessionStorage.clear();
     // window.location.replace removes the dashboard from browser history
-    window.location.replace('index.html');
+    window.location.replace('clinic%20registration.html');
 }
 
 // ── Initialization Trigger ──────────────────────────────────
@@ -797,7 +793,7 @@ let isDashboardInitialized = false;
 function triggerInit() {
     const session = sessionStorage.getItem('userSession');
     if (!session) {
-        window.location.replace('index.html');
+        window.location.replace('clinic%20registration.html');
         return;
     }
     if (!isDashboardInitialized) {
@@ -896,10 +892,10 @@ function effectiveStatus(record) {
 function loadAccountData() {
     // Synchronize all data fetching to ensure connectivity across all features
     return Promise.all([
-        fetch('../PHP%20DATABASE/get_students.php').then(res => res.ok ? res.json() : []),
-        fetch('../PHP%20DATABASE/get_reminder_logs.php').then(res => res.ok ? res.json() : []),
-        fetch('../PHP%20DATABASE/get_submissions.php').then(res => res.ok ? res.json() : []),
-        fetch('../PHP%20DATABASE/get_scheduled_reminders.php').then(res => res.ok ? res.json() : [])
+        fetch('get_students.php').then(res => res.ok ? res.json() : []),
+        fetch('get_reminder_logs.php').then(res => res.ok ? res.json() : []),
+        fetch('get_submissions.php').then(res => res.ok ? res.json() : []),
+        fetch('get_scheduled_reminders.php').then(res => res.ok ? res.json() : [])
     ])
     .then(([studentsData, logsData, submissionsData, scheduledData]) => {
         if (!Array.isArray(studentsData)) studentsData = [];
@@ -1027,7 +1023,7 @@ function startScheduledReminderAutoProcessor() {
 function runScheduledReminderProcessor(showMessage) {
     if (scheduledReminderProcessorRunning) return Promise.resolve();
     scheduledReminderProcessorRunning = true;
-    return fetch('../PHP%20DATABASE/process_scheduled_reminders.php', { cache: 'no-store' })
+    return fetch('process_scheduled_reminders.php', { cache: 'no-store' })
         .then(function(response) {
             return response.ok ? response.json() : { status: 'error', message: 'Processor request failed.' };
         })
@@ -1062,7 +1058,7 @@ function runEmailReplyChecker(showMessage) {
     emailReplyCheckerRunning = true;
     var controller = new AbortController();
     var timeoutId = setTimeout(function() { controller.abort(); }, 45000);
-    return fetch('../PHP%20DATABASE/check_email_replies.php', { cache: 'no-store', signal: controller.signal })
+    return fetch('check_email_replies.php', { cache: 'no-store', signal: controller.signal })
         .then(function(response) {
             return response.ok ? response.json() : { status: 'error', errors: ['Inbox checker request failed.'] };
         })
@@ -1108,7 +1104,7 @@ function refreshProfile() {
     if (!session || !session.email) return Promise.resolve();
     var formData = new FormData();
     formData.append('email', session.email);
-    return fetch('../PHP%20DATABASE/get_profile.php', { method: 'POST', body: formData })
+    return fetch('get_profile.php', { method: 'POST', body: formData })
     .then(res => res.ok ? res.json() : {status: 'error'})
     .then(data => {
         if (data && data.status === 'success') {
@@ -1228,7 +1224,7 @@ function addStudent() {
     var formData = new FormData();
     for (var key in s) { formData.append(key, s[key]); }
 
-    fetch('../PHP%20DATABASE/add_student.php', {
+    fetch('add_student.php', {
         method: 'POST',
         body: formData
     })
@@ -1281,7 +1277,7 @@ function archiveStudent(studentId, studentName) {
     formData.append('student_id', studentId);
     formData.append('archive', 1);
 
-    fetch('../PHP%20DATABASE/archive_student.php', { method: 'POST', body: formData })
+    fetch('archive_student.php', { method: 'POST', body: formData })
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
@@ -1311,7 +1307,7 @@ function restoreStudent(studentId, studentName) {
     formData.append('student_id', studentId);
     formData.append('archive', 0);
 
-    fetch('../PHP%20DATABASE/archive_student.php', { method: 'POST', body: formData })
+    fetch('archive_student.php', { method: 'POST', body: formData })
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
@@ -1326,7 +1322,7 @@ function deleteArchive(studentId, studentName) {
     var formData = new FormData();
     formData.append('student_id', studentId);
 
-    fetch('../PHP%20DATABASE/delete_student.php', { method: 'POST', body: formData })
+    fetch('delete_student.php', { method: 'POST', body: formData })
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
@@ -1864,7 +1860,7 @@ function simulateStudentSubmission(studentId, fileName, channel, studentMsg) {
     formData.append('message', studentMsg || 'Good day Nurse, here are my requirements. Thank you!');
     formData.append('channel', channel || 'Gmail');
 
-    fetch('../PHP%20DATABASE/add_submission.php', { method: 'POST', body: formData })
+    fetch('add_submission.php', { method: 'POST', body: formData })
     .then(res => res.json())
     .then(data => {
         if (data.status === 'success') {
@@ -1882,7 +1878,7 @@ function approveSubmission(subId) {
     formData.append('student_id', sub.student_id || sub.studentId);
     formData.append('id', subId);
 
-    fetch('../PHP%20DATABASE/approve_submission.php', { method: 'POST', body: formData })
+    fetch('approve_submission.php', { method: 'POST', body: formData })
         .then(function(response) { return response.json(); })
         .then(function(data) {
             if (data.status === 'success') {
@@ -1914,7 +1910,7 @@ function rejectSubmission(subId) {
     formData.append('student_id', sub.student_id || sub.studentId);
     formData.append('reason', rejectionReason);
 
-    fetch('../PHP%20DATABASE/reject_submission.php', { method: 'POST', body: formData })
+    fetch('reject_submission.php', { method: 'POST', body: formData })
     .then(function(response) { return response.json(); })
     .then(function(data) {
         showSendingOverlay(false);
@@ -1968,7 +1964,7 @@ function renderSubmissionFileChips(sub) {
     }
     return files.map(function(fileName) {
         var safeFile = encodeURIComponent(fileName);
-        return '<div class="sub-file-chip sub-file-link" title="View Document" onclick="window.open(\'../PHP%20DATABASE/view_upload.php?file='+safeFile+'\', \'_blank\')"><i class="fas fa-file-alt"></i> '+escapeHtml(fileName)+' <small>(Click to view)</small></div>';
+        return '<div class="sub-file-chip sub-file-link" title="View Document" onclick="window.open(\'view_upload.php?file='+safeFile+'\', \'_blank\')"><i class="fas fa-file-alt"></i> '+escapeHtml(fileName)+' <small>(Click to view)</small></div>';
     }).join('');
 }
 
@@ -2153,7 +2149,7 @@ function scheduleComplianceReminder() {
         formData.append('attachments[]', blastReminderAttachment.file, blastReminderAttachment.name);
     }
 
-    fetch('../PHP%20DATABASE/save_scheduled_reminder.php', { method: 'POST', body: formData })
+    fetch('save_scheduled_reminder.php', { method: 'POST', body: formData })
         .then(function(response) { return response.json(); })
         .then(function(data) {
             if (data.status !== 'success') {
@@ -2310,7 +2306,7 @@ function blastReminder() {
             logData.append('success', log.success);
             logData.append('failed', log.failed);
 
-            fetch('../PHP%20DATABASE/save_reminder_log.php', { method: 'POST', body: logData })
+            fetch('save_reminder_log.php', { method: 'POST', body: logData })
                 .then(function(response){ return response.json(); })
                 .then(function(data) {
                     loadAccountData(); // Refresh records from DB to ensure persistence
@@ -2398,7 +2394,7 @@ function blastReminder() {
     }
 
     showSendingOverlay(true);
-    fetch('../PHP%20DATABASE/send_blast_reminder.php', { method: 'POST', body: formData })
+    fetch('send_blast_reminder.php', { method: 'POST', body: formData })
         .then(function(response){ return response.json(); })
         .then(function(data) {
             showSendingOverlay(false);
@@ -2515,7 +2511,7 @@ function renderReminderLog() {
 function clearReminderLogs() {
     if (!confirm('Are you sure you want to clear all reminder logs for testing?')) return;
     console.log('Attempting to clear reminder logs...'); // Added for debugging
-    fetch('../PHP%20DATABASE/clear_reminder_logs.php')
+    fetch('clear_reminder_logs.php')
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
@@ -2663,7 +2659,7 @@ function updateOverallChart() {
 }
 function resetAllRecords() {
     if (!confirm("⚠️ Are you sure you want to RESET ALL RECORDS? This action cannot be undone.")) return;
-    fetch('../PHP%20DATABASE/reset_records.php', { method: 'POST' })
+    fetch('reset_records.php', { method: 'POST' })
     .then(res => res.json())
     .then(data => {
         if (data.status === 'success') {
@@ -2973,7 +2969,7 @@ function showStudentProfileModal(studentId) {
             var files = getSubmissionFiles(sub);
             var filesHtml = files.length ? files.map(function(fileName) {
                 var safeFile = encodeURIComponent(fileName);
-                return '<a class="profile-file-link" href="../PHP%20DATABASE/view_upload.php?file=' + safeFile + '" target="_blank"><i class="fas fa-file-alt"></i><span>' + escapeHtml(fileName) + '</span></a>';
+                return '<a class="profile-file-link" href="view_upload.php?file=' + safeFile + '" target="_blank"><i class="fas fa-file-alt"></i><span>' + escapeHtml(fileName) + '</span></a>';
             }).join('<br>') : '<span class="profile-verified-note"><i class="fas fa-check-circle"></i> Verified</span>';
             return '<div class="profile-submission-item">'
                 + '<div class="profile-detail-row"><span>File Requirement</span><strong>' + filesHtml + '</strong></div>'
@@ -3158,7 +3154,7 @@ function saveSettings(successMessage) {
     formData.append('default_chart', chartType);
     formData.append('dark_mode', isDark ? 1 : 0);
 
-    fetch('../PHP%20DATABASE/update_profile.php', { method: 'POST', body: formData })
+    fetch('update_profile.php', { method: 'POST', body: formData })
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
@@ -3213,7 +3209,7 @@ function updateSecurity() {
     formData.append('currentPassword', current);
     formData.append('newPassword', np);
 
-    fetch('../PHP%20DATABASE/change_password_profile.php', {
+    fetch('change_password_profile.php', {
         method: 'POST',
         body: formData
     })
@@ -3251,7 +3247,7 @@ function uploadPhoto(e) {
         formData.append('default_chart', session.default_chart || 'bar');
         formData.append('dark_mode', session.dark_mode ? 1 : 0);
         formData.append('photo', r.result);
-        fetch('../PHP%20DATABASE/update_profile.php', { method: 'POST', body: formData })
+        fetch('update_profile.php', { method: 'POST', body: formData })
         .then(() => { refreshProfile(); showToast('✅ Photo saved to Database!'); });
     };
     r.readAsDataURL(file);
@@ -3782,7 +3778,7 @@ function saveImportedStudents() {
     formData.append('students', JSON.stringify(toSave));
     formData.append('source', activeImportTab === 'excel' ? 'excel' : 'manual');
 
-    fetch('../PHP%20DATABASE/bulk_import_students.php', {
+    fetch('bulk_import_students.php', {
         method: 'POST',
         body: formData
     })
@@ -4133,3 +4129,6 @@ function buildStudentTable(data, showStrand) {
     }).join('');
     return '<table><thead><tr>'+headerRow+'</tr></thead><tbody>'+rows+'</tbody></table>';
 }
+
+
+
