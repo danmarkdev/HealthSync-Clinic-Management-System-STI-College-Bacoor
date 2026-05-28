@@ -613,6 +613,7 @@ var activeEntry = null;
 
 // ── On load: validate token from URL ──────────────────────
 window.addEventListener('load', function () {
+    if (!document.getElementById('stateInvalid')) return;
     var params = new URLSearchParams(window.location.search);
     var token  = params.get('reset');
 
@@ -791,6 +792,7 @@ function signOut() {
 // ── Initialization Trigger ──────────────────────────────────
 let isDashboardInitialized = false;
 function triggerInit() {
+    if (!document.getElementById('app-dashboard')) return;
     const session = sessionStorage.getItem('userSession');
     if (!session) {
         window.location.replace('index.html');
@@ -4129,6 +4131,5 @@ function buildStudentTable(data, showStrand) {
     }).join('');
     return '<table><thead><tr>'+headerRow+'</tr></thead><tbody>'+rows+'</tbody></table>';
 }
-
 
 
