@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HealthSync | STI College Bacoor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+    <!-- Single Combined Stylesheet -->
+    <link rel="stylesheet" href="../STYLE%20CSS/style.css">
+
+    <!-- EmailJS + Page Router -->
+    <script>
+        var HEALTHSYNC_REQUIRE_LOGIN_OTP = false;
+        var EMAILJS_PUBLIC_KEY           = "bODiwSKsKVFXHiIB1";
+        var EMAILJS_SERVICE_ID           = "Clinic System";
+        var EMAILJS_TEMPLATE_ID          = "template_1t0inac";
+        var EMAILJS_FORGOT_TEMPLATE_ID   = "template_iwttvmh";
+        emailjs.init(EMAILJS_PUBLIC_KEY);
+
+        /* Decide which section to show on load */
+        var HS_PAGE = 'login';
+        (function () {
+            var params = new URLSearchParams(window.location.search);
+            if (params.get('reset')) {
+                HS_PAGE = 'reset';
+            } else if (sessionStorage.getItem('userSession')) {
+                HS_PAGE = 'dashboard';
+            }
+        })();
+    </script>
+
+    <!-- Dashboard inline styles (originally inline in clinic_dashboard.html) -->
+    <style>
+        .import-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:10000; align-items:center; justify-content:center; }
+        .import-modal-overlay.open { display:flex; }
+        .import-modal-box { background:white; border-radius:20px; width:min(700px,94vw); max-height:88vh; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 32px 80px rgba(0,0,0,0.25); animation:slideUp .3s ease; }
+        @keyframes slideUp { from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);} }
+        .import-modal-head { padding:22px 28px 18px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; justify-content:space-between; background:linear-gradient(135deg,#0d2b52,#1a4a8a); }
+        .import-modal-head h3 { color:#ffcb05; font-size:17px; margin:0; }
+        .import-modal-head p  { color:rgba(255,255,255,.7); font-size:12px; margin:3px 0 0; }
+        .import-modal-close { background:none; border:none; color:rgba(255,255,255,.6); font-size:20px; cursor:pointer; width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; transition:.2s; }
+        .import-modal-close:hover { background:rgba(255,255,255,.1); color:white; }
+        .import-tabs { display:flex; border-bottom:2px solid #f0f4f8; background:#f8faff; }
+        .import-tab { flex:1; padding:14px 16px; border:none; background:none; font-family:'Poppins',sans-serif; font-size:13px; font-weight:600; color:#999; cursor:pointer; transition:.2s; border-bottom:3px solid transparent; margin-bottom:-2px; }
+        .import-tab.active { color:#0d2b52; border-bottom-color:#ffcb05; background:white; }
+        .import-tab:hover:not(.active) { color:#0d2b52; background:white; }
+        .import-body { padding:24px 28px; overflow-y:auto; flex:1; scrollbar-width:none; -ms-overflow-style:none; }
+        .import-body::-webkit-scrollbar, .import-preview-table::-webkit-scrollbar { width:0; height:0; display:none; }
+        .import-panel { display:none; }
+        .import-panel.active { display:block; }
+        .drop-zone { border:2.5px dashed #c3cfe2; border-radius:16px; padding:40px 24px; text-align:center; transition:.2s; cursor:pointer; background:#f8faff; }
+        .drop-zone:hover, .drop-zone.dragover { border-color:#0d2b52; background:#eef3fb; }
+        .drop-zone-icon { font-size:42px; margin-bottom:10px; }
+        .drop-zone h4 { font-size:15px; color:#0d2b52; margin:0 0 5px; font-weight:700; }
+        .drop-zone p  { font-size:12px; color:#888; margin:0 0 16px; }
+        .import-preview-table { overflow-x:auto; margin-top:16px; scrollbar-width:none; -ms-overflow-style:none; }
+        .import-preview-table table { width:100%; border-collapse:collapse; font-size:12px; }
+        .import-preview-table th { background:#0d2b52; color:white; padding:8px 10px; text-align:left; font-size:11px; }
+        .import-preview-table td { padding:7px 10px; border-bottom:1px solid #f0f0f0; }
+        .import-preview-table tr:nth-child(even) td { background:#f8faff; }
+        .import-status-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700; }
+        .import-complete { background:#e8f5e9; color:#2e7d32; }
+        .import-pending  { background:#fde8e8; color:#c0392b; }
+        .import-footer { padding:16px 28px; border-top:1px solid #f0f0f0; display:flex; gap:10px; justify-content:flex-end; align-items:center; }
+        .import-info-bar { background:#e8f4fd; border:1px solid #90c8f0; border-radius:10px; padding:10px 14px; font-size:12px; color:#1a4a8a; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+        .template-download-btn { display:inline-flex; align-items:center; gap:7px; padding:9px 18px; background:#0d2b52; color:white; border:none; border-radius:9px; font-family:'Poppins',sans-serif; font-size:13px; font-weight:600; cursor:pointer; transition:.2s; text-decoration:none; }
+        .template-download-btn:hover { background:#1a4a8a; }
+        .manual-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+        .manual-form-grid .span-2 { grid-column:1/-1; }
+        .mfield label { display:block; font-size:11px; font-weight:700; color:#0d2b52; margin-bottom:4px; }
+        .mfield input, .mfield select { width:100%; padding:9px 11px; border:1.5px solid #e0e6f0; border-radius:8px; font-size:13px; font-family:'Poppins',sans-serif; outline:none; transition:.2s; }
+        .mfield input:focus, .mfield select:focus { border-color:#0d2b52; }
+        .mfield input.input-invalid, .mfield select.input-invalid { border-color:#c0392b; background:#fff7f7; box-shadow:0 0 0 3px rgba(192,57,43,.12); }
+        .sub-review-card { border:1.5px solid #e0e6f0; border-radius:14px; margin-bottom:12px; overflow:hidden; transition:.2s; animation:rowFadeIn .3s ease; }
+        .sub-review-card.unread { border-color:#ffcb05; box-shadow:0 0 0 2px rgba(255,203,5,0.25); }
+        .sub-review-head { display:flex; align-items:center; gap:12px; padding:13px 16px; background:#f8faff; border-bottom:1px solid #f0f0f0; }
+        .sub-avatar { width:38px; height:38px; border-radius:50%; background:#0d2b52; color:white; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; flex-shrink:0; }
+        .sub-info { flex:1; }
+        .sub-name { font-weight:700; font-size:14px; color:#0d2b52; }
+        .sub-meta { font-size:11px; color:#888; margin-top:2px; }
+        .sub-time { font-size:10px; color:#bbb; white-space:nowrap; }
+        .sub-badge { padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700; background:#fff3cd; color:#856404; border:1px solid #ffd96a; }
+        .sub-review-body { padding:12px 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+        .sub-file-chip { display:inline-flex; align-items:center; gap:6px; background:#eef3fb; color:#0d2b52; border:1px solid #c3cfe2; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:600; }
+        .sub-actions { margin-left:auto; display:flex; gap:8px; }
+        .btn-approve { padding:7px 16px; background:#2ecc71; color:white; border:none; border-radius:8px; font-family:'Poppins',sans-serif; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; transition:.2s; }
+        .btn-approve:hover { background:#27ae60; }
+        .btn-reject { padding:7px 14px; background:#fde8e8; color:#c0392b; border:1px solid #f5c6c2; border-radius:8px; font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:5px; transition:.2s; }
+        .btn-reject:hover { background:#fdd; }
+        .hs-notif-item.approval { border-left:3px solid #2ecc71; }
+        .hs-notif-approve-btn { padding:5px 12px; background:#2ecc71; color:white; border:none; border-radius:7px; font-family:'Poppins',sans-serif; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap; }
+        .hs-notif-approve-btn:hover { background:#27ae60; }
+        .btn-print { padding:10px 18px; border:1.5px solid #0d2b52; border-radius:9px; background:white; color:#0d2b52; font-family:'Poppins',sans-serif; font-size:13px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition:.2s; }
+        .btn-print:hover { background:#0d2b52; color:white; }
+        .legend-col { display:flex; flex-direction:column; gap:20px; justify-content:center; }
+        nav a { white-space:nowrap !important; }
+        aside { display:flex; flex-direction:column; height:100vh; position:sticky; top:0; }
+        aside nav { flex:1; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; scrollbar-width:none; -ms-overflow-style:none; }
+        aside nav::-webkit-scrollbar { display:none; }
+        .nav-items { flex:1; }
+        .nav-logout { padding:20px; margin-top:auto; }
+    </style>
+</head>
+<body>
+
+<!-- ================================================================
+     SECTION 1: LOGIN PAGE (default view)
+     ================================================================ -->
+<div id="app-login" style="display:none;">
+
+    <div class="bg-cross one"></div>
+    <div class="bg-cross two"></div>
+    <div class="bg-cross three"></div>
+
+    <div class="auth-wrapper">
+
+        <!-- LEFT PANEL -->
+        <div class="auth-brand">
+            <div class="brand-inner">
+                <div class="logo-mark"><i class="fas fa-heartbeat"></i></div>
+                <h1>HealthSync</h1>
+                <p class="brand-sub">STI College Bacoor</p>
+                <p class="brand-desc">Clinic Management System for efficient student health record management and compliance tracking.</p>
+                <div class="brand-features">
+                    <div class="feature-item"><i class="fas fa-shield-alt"></i> Secure Records</div>
+                    <div class="feature-item"><i class="fas fa-chart-pie"></i> Analytics Dashboard</div>
+                    <div class="feature-item"><i class="fas fa-paper-plane"></i> Broadcast Reminders</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL -->
+        <div class="auth-forms">
+
+            <!-- LOGIN FORM (active by default) -->
+            <div id="form-login" class="auth-form active">
+                <div class="form-header">
+                    <h2>Welcome Back</h2>
+                    <p>Sign in to your clinic account</p>
+                </div>
+                <div id="loginError" class="auth-alert error" style="display:none;">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span id="loginErrorMsg">Invalid credentials.</span>
+                </div>
+                <div id="loginSuccess" class="auth-alert success" style="display:none;">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Login successful! Redirecting...</span>
+                </div>
+                <div class="field-group">
+                    <label><i class="fas fa-envelope"></i> Email Address</label>
+                    <input type="email" id="loginEmail" placeholder="nurse@gmail.com" autocomplete="email">
+                </div>
+                <div class="field-group">
+                    <label><i class="fas fa-lock"></i> Password</label>
+                    <div class="pass-wrap">
+                        <input type="password" id="loginPassword" placeholder="Enter your password" autocomplete="current-password">
+                        <button class="toggle-pass" onclick="togglePass('loginPassword',this)" type="button" tabindex="-1"><i class="fas fa-eye"></i></button>
+                    </div>
+                </div>
+                <div class="field-row">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="rememberMe"> Remember me
+                    </label>
+                    <a href="#" class="forgot-link" onclick="showForgot();return false;">Forgot password?</a>
+                </div>
+                <button class="btn-auth" onclick="doLogin()">
+                    <i class="fas fa-sign-in-alt"></i> Sign In
+                </button>
+                <p class="login-legal-links">
+                    <a href="#" onclick="showLegalModal('terms');return false;">Terms</a>
+                    <span>&amp;</span>
+                    <a href="#" onclick="showLegalModal('privacy');return false;">Privacy Policy</a>
+                </p>
+            </div>
+
+            
+
+        </div><!-- end auth-forms -->
+    </div><!-- end auth-wrapper -->
+
+    <!-- OTP MODAL -->
+    <div class="modal-overlay" id="loginOtpModal">
+        <div class="modal-box-sm">
+            <button class="modal-close" onclick="hideLoginOtpModal()">&#x2715;</button>
+            <h3><i class="fas fa-shield-alt" style="color:#0d2b52;margin-right:8px;"></i>Two-Step Verification</h3>
+            <p style="font-size:13px;color:#666;margin-bottom:14px;">Enter the 6-digit code sent to your Gmail.</p>
+            <p id="otpTargetEmail" style="font-size:12px;color:#0d2b52;font-weight:600;margin:0 0 12px;"></p>
+            <div class="field-group">
+                <label><i class="fas fa-key"></i> OTP Code</label>
+                <input type="text" id="loginOtpCode" maxlength="6" placeholder="Enter 6-digit OTP" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+            </div>
+            <div id="loginOtpMsg" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:9px;font-size:13px;font-weight:500;"></div>
+            <button class="btn-auth" onclick="verifyLoginOtp()"><i class="fas fa-check-circle"></i> Verify &amp; Login</button>
+            <button class="btn-auth" onclick="resendLoginOtp()" style="margin-top:8px;background:#f0f4ff;color:#0d2b52;"><i class="fas fa-paper-plane"></i> Resend OTP</button>
+        </div>
+    </div>
+
+    <!-- FORGOT PASSWORD MODAL -->
+    <div class="modal-overlay" id="forgotModal">
+        <div class="modal-box-sm">
+            <button class="modal-close" onclick="hideForgot()">&#x2715;</button>
+            <h3><i class="fas fa-key" style="color:#0d2b52;margin-right:8px;"></i>Reset Password</h3>
+            <div id="resetStep1">
+                <p style="font-size:13px;color:#666;margin-bottom:16px;">Enter your registered email — we'll send a reset link.</p>
+                <div class="field-group">
+                    <label><i class="fas fa-envelope"></i> Email Address</label>
+                    <input type="email" id="forgotEmail" placeholder="nurse@gmail.com">
+                </div>
+                <button class="btn-auth" id="forgotSendBtn" onclick="doForgot()" style="margin-top:8px;">
+                    <i class="fas fa-paper-plane"></i> Send Reset Link
+                </button>
+                <div id="forgotMsg" style="display:none;margin-top:12px;padding:10px 14px;border-radius:9px;font-size:13px;font-weight:500;"></div>
+            </div>
+            <div id="resetStep2" style="display:none;">
+                <p style="font-size:13px;color:#27ae60;font-weight:600;margin-bottom:16px;"><i class="fas fa-check-circle"></i> Reset link verified! Set your new password below.</p>
+                <div class="field-group">
+                    <label><i class="fas fa-lock"></i> New Password</label>
+                    <div class="pass-wrap">
+                        <input type="password" id="resetNewPass" placeholder="Min. 6 characters" oninput="updateResetStrength()">
+                        <button class="toggle-pass" onclick="togglePass('resetNewPass',this)" type="button" tabindex="-1"><i class="fas fa-eye"></i></button>
+                    </div>
+                </div>
+                <div class="pass-strength-wrap"><div class="pass-strength-bar" id="resetStrengthBar"></div></div>
+                <p class="pass-strength-label" id="resetStrengthLabel"></p>
+                <div class="field-group">
+                    <label><i class="fas fa-lock"></i> Confirm New Password</label>
+                    <div class="pass-wrap">
+                        <input type="password" id="resetConfirmPass" placeholder="Re-enter new password">
+                        <button class="toggle-pass" onclick="togglePass('resetConfirmPass',this)" type="button" tabindex="-1"><i class="fas fa-eye"></i></button>
+                    </div>
+                </div>
+                <div id="resetMsg" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:9px;font-size:13px;font-weight:500;"></div>
+                <button class="btn-auth" onclick="doResetPassword()"><i class="fas fa-shield-alt"></i> Save New Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEGAL MODAL -->
+    <div class="modal-overlay" id="legalModal">
+        <div class="modal-box-lg">
+            <button class="modal-close" onclick="hideLegalModal()">&#x2715;</button>
+            <div class="legal-modal-head">
+                <h3 id="legalModalTitle">Terms of Use</h3>
+                <p id="legalModalSubtitle">Please review before creating your account.</p>
+            </div>
+            <div class="legal-modal-body" id="legalModalBody"></div>
+            <div class="legal-modal-actions">
+                <button class="btn-auth legal-secondary-btn" type="button" onclick="hideLegalModal()">Close</button>
+                <button class="btn-auth" type="button" onclick="acceptLegalFromModal()">I Understand</button>
+            </div>
+        </div>
+    </div>
+
+</div><!-- end #app-login -->
+
+
+<!-- ================================================================
+     SECTION 2: RESET PASSWORD PAGE
+     ================================================================ -->
+<div id="app-reset" style="display:none;">
+
+    <div class="bg-cross one"></div>
+    <div class="bg-cross two"></div>
+    <div class="bg-cross three"></div>
+
+    <div class="auth-wrapper">
+        <div class="auth-brand">
+            <div class="brand-inner">
+                <div class="logo-mark"><i class="fas fa-heartbeat"></i></div>
+                <h1>HealthSync</h1>
+                <p class="brand-sub">STI College Bacoor</p>
+                <p class="brand-desc">Clinic Management System for efficient student health record management and compliance tracking.</p>
+                <div class="brand-features">
+                    <div class="feature-item"><i class="fas fa-shield-alt"></i> Secure Records</div>
+                    <div class="feature-item"><i class="fas fa-chart-pie"></i> Analytics Dashboard</div>
+                    <div class="feature-item"><i class="fas fa-paper-plane"></i> Broadcast Reminders</div>
+                </div>
+            </div>
+        </div>
+        <div class="auth-forms">
+            <div id="stateInvalid" class="auth-form">
+                <div class="state-box">
+                    <div class="state-icon">❌</div>
+                    <div class="form-header"><h2>Invalid Reset Link</h2><p>This reset link is invalid or has already been used.<br>Please request a new one from the login page.</p></div>
+                    <button class="btn-auth" onclick="goToLogin()"><i class="fas fa-arrow-left"></i> Back to Login</button>
+                </div>
+            </div>
+            <div id="stateExpired" class="auth-form">
+                <div class="state-box">
+                    <div class="state-icon">⏰</div>
+                    <div class="form-header"><h2>Reset Link Expired</h2><p>This link has expired. Links are only valid for <strong>30 minutes</strong>.<br>Please request a new one from the login page.</p></div>
+                    <button class="btn-auth" onclick="goToLogin()"><i class="fas fa-arrow-left"></i> Back to Login</button>
+                </div>
+            </div>
+            <div id="stateForm" class="auth-form">
+                <div class="form-header"><h2>Set New Password</h2><p>Enter and confirm your new password below.</p></div>
+                <div id="resetAlert" class="auth-alert error" style="display:none;">
+                    <i class="fas fa-exclamation-circle"></i><span id="resetAlertMsg"></span>
+                </div>
+                <div class="field-group">
+                    <label><i class="fas fa-lock"></i> New Password</label>
+                    <div class="pass-wrap">
+                        <input type="password" id="resetNewPass" placeholder="Enter new password (min. 6 characters)" oninput="updateStrength()">
+                        <button class="toggle-pass" type="button" tabindex="-1" onclick="togglePass('resetNewPass',this)"><i class="fas fa-eye"></i></button>
+                    </div>
+                </div>
+                <div class="pass-strength-wrap"><div class="pass-strength-bar" id="strengthBar"></div></div>
+                <p class="pass-strength-label" id="strengthLabel"></p>
+                <div class="field-group">
+                    <label><i class="fas fa-lock"></i> Confirm New Password</label>
+                    <div class="pass-wrap">
+                        <input type="password" id="resetConfirmPass" placeholder="Re-enter your new password">
+                        <button class="toggle-pass" type="button" tabindex="-1" onclick="togglePass('resetConfirmPass',this)"><i class="fas fa-eye"></i></button>
+                    </div>
+                </div>
+                <button class="btn-auth" onclick="doResetPassword()"><i class="fas fa-shield-alt"></i> Save New Password</button>
+                <p class="auth-switch">Remembered your password? <a onclick="goToLogin()" style="cursor:pointer;">Sign in here</a></p>
+            </div>
+            <div id="stateSuccess" class="auth-form">
+                <div class="state-box">
+                    <div class="state-icon">✅</div>
+                    <div class="form-header"><h2>Password Changed!</h2><p>Your password has been updated successfully.<br>Redirecting you to the login page...</p></div>
+                    <div class="auth-alert success" style="display:flex;"><i class="fas fa-check-circle"></i><span>Password saved! Redirecting to login...</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div><!-- end #app-reset -->
+
+
+<!-- ================================================================
+     SECTION 3: DASHBOARD
+     ================================================================ -->
+<div id="app-dashboard" style="display:none;">
+
+    <div class="bg-cross one"></div>
+    <div class="bg-cross two"></div>
+    <div id="toast"></div>
+
+    <aside>
+        <div class="brand">
+            <h2>HealthSync</h2>
+            <p id="nav-branch-name" style="margin:4px 0 0;font-size:11px;opacity:0.7;">STI COLLEGE BACOOR</p>
+            <div class="nurse-profile-sm" onclick="showPage('settings')">
+                <div class="avatar-circle" id="nav-avatar">--</div>
+                <div class="nurse-info">
+                    <b id="nav-nurse-name">Loading...</b><br>
+                    <span style="font-size:10px;opacity:0.7;">Clinic Nurse</span>
+                </div>
+            </div>
+        </div>
+        <nav>
+            <div class="nav-items">
+                <a href="#" onclick="showPage('dash');return false;" id="link-dash" class="active"><i class="fas fa-th-large"></i> Dashboard</a>
+                <a href="#" onclick="showPage('shs-students');return false;" id="link-shs-students"><i class="fas fa-user-graduate"></i> SHS Students</a>
+                <a href="#" onclick="showPage('shs-teachers');return false;" id="link-shs-teachers"><i class="fas fa-chalkboard-teacher"></i> SHS Teachers</a>
+                <a href="#" onclick="showPage('college-students');return false;" id="link-college-students"><i class="fas fa-university"></i> Tertiary Students</a>
+                <a href="#" onclick="showPage('college-teachers');return false;" id="link-college-teachers"><i class="fas fa-user-tie"></i> Tertiary Teachers</a>
+                <a href="#" onclick="showPage('compliance');return false;" id="link-compliance"><i class="fas fa-check-double"></i> Compliance</a>
+                <a href="#" onclick="showPage('records');return false;" id="link-records"><i class="fas fa-notes-medical"></i> Medical Records</a>
+                <a href="#" onclick="showPage('archive');return false;" id="link-archive"><i class="fas fa-file-archive"></i> Archive</a>
+                <a href="#" onclick="showPage('settings');return false;" id="link-settings"><i class="fas fa-cog"></i> Settings</a>
+            </div>
+            <div class="nav-logout">
+                <button class="btn" style="background:#c0392b;color:white;width:100%;" onclick="signOut()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            </div>
+        </nav>
+    </aside>
+
+    <main>
+        <!-- DASHBOARD -->
+        <div id="dash" class="page active">
+            <header style="margin-top:0;margin-bottom:20px;">
+                <h1 style="margin:0;">Clinic Dashboard Overview</h1>
+                <p id="date-now" style="margin:4px 0 0;color:#666;font-size:14px;"></p>
+            </header>
+            <div class="stat-grid">
+                <div class="stat-box bg-blue"><small>Total Overall Populations</small><h2 id="total-count">0</h2></div>
+                <div class="stat-box bg-green"><small>Completes</small><h2 id="compliant-count">0</h2></div>
+                <div class="stat-box bg-orange"><small>Pendings</small><h2 id="pending-count">0</h2></div>
+            </div>
+            <div class="glass-card">
+                <h3 style="margin-top:0;margin-bottom:20px;"><i class="fas fa-chart-pie" style="color:var(--sti-blue);margin-right:8px;"></i>Overall Population Distribution</h3>
+                <div class="strand-wrap">
+                    <div class="chart-container"><canvas id="overallDistributionChart"></canvas></div>
+                    <div class="legend-col">
+                        <div class="strand-legend" id="overallLegend"></div>
+                        <button class="btn-print" onclick="openPrintModal('compliance')" style="margin-top:5px;width:fit-content;"><i class="fas fa-print"></i> Print Report</button>
+                    </div>
+                </div>
+            </div>
+            <div class="glass-card">
+                <h3 style="margin-top:0;"><i class="fas fa-users" style="color:var(--sti-blue);margin-right:8px;"></i>Overall List</h3>
+                <div class="tbl-wrap">
+                    <table>
+                        <thead><tr><th>Teacher ID / Student ID</th><th>Full Name</th><th>Category</th><th>Status</th><th style="text-align:center;">Action</th></tr></thead>
+                        <tbody id="dashTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- MEDICAL RECORDS -->
+        <div id="records" class="page">
+            <header style="margin-top:0;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                <div>
+                    <h1 style="margin:0;" id="records-title">Medical Records</h1>
+                    <p style="margin:4px 0 0;color:#666;font-size:14px;" id="records-sub">View and manage health compliance records for all personnel</p>
+                </div>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <button class="btn btn-add" onclick="openImportModal()" style="background:#27ae60;color:white;"><i class="fas fa-file-excel"></i> Import excel</button>
+                </div>
+            </header>
+            <div class="glass-card compliance-guide-card" style="border-left:5px solid var(--sti-yellow);background:linear-gradient(135deg,#fffdf0,#fff);">
+                <h3 style="margin:0 0 18px;color:var(--sti-blue);font-size:15px;"><i class="fas fa-info-circle" style="color:var(--sti-yellow);margin-right:8px;"></i>How Medical Compliance Works at STI Bacoor</h3>
+                <div style="display:flex;flex-wrap:wrap;align-items:stretch;gap:6px;margin-bottom:18px;">
+                    <div style="flex:1;min-width:100px;background:#e8f4fd;border:2px solid #90c8f0;border-radius:14px;padding:14px 10px;text-align:center;"><div style="font-size:24px;margin-bottom:6px;">🎓</div><div style="font-size:9px;font-weight:800;color:#0078d4;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">Step 1</div><div style="font-size:11px;color:#333;line-height:1.6;">Personnel completes the medical assessment form <em>(Excel)</em></div></div>
+                    <div style="display:flex;align-items:center;font-size:16px;color:#c0ccd8;flex-shrink:0;padding:0 2px;">›</div>
+                    <div style="flex:1;min-width:100px;background:#e8f4fd;border:2px solid #90c8f0;border-radius:14px;padding:14px 10px;text-align:center;"><div style="font-size:24px;margin-bottom:6px;">📧</div><div style="font-size:9px;font-weight:800;color:#0078d4;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">Step 2</div><div style="font-size:11px;color:#333;line-height:1.6;">Submit the file via <strong>STI Outlook or personal Gmail</strong></div></div>
+                    <div style="display:flex;align-items:center;font-size:16px;color:#c0ccd8;flex-shrink:0;padding:0 2px;">›</div>
+                    <div style="flex:1;min-width:100px;background:#e8f8f0;border:2px solid #7ed1a6;border-radius:14px;padding:14px 10px;text-align:center;"><div style="font-size:24px;margin-bottom:6px;">🔔</div><div style="font-size:9px;font-weight:800;color:#217346;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">Step 3</div><div style="font-size:11px;color:#333;line-height:1.6;">Clinic staff validates and approves the submission</div></div>
+                    <div style="display:flex;align-items:center;font-size:16px;color:#c0ccd8;flex-shrink:0;padding:0 2px;">›</div>
+                    <div style="flex:1;min-width:100px;background:#fef9e7;border:2px solid #f0d060;border-radius:14px;padding:14px 10px;text-align:center;"><div style="font-size:24px;margin-bottom:6px;">✅</div><div style="font-size:9px;font-weight:800;color:#b8860b;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">Step 4</div><div style="font-size:11px;color:#333;line-height:1.6;">Status auto-updates to <strong>Complete</strong> in the system</div></div>
+                </div>
+                <div style="background:#fff8e1;border-left:4px solid var(--sti-yellow);border-radius:0 10px 10px 0;padding:10px 14px;font-size:12px;color:#7a5c00;line-height:1.7;"><strong>⚠️ Note:</strong> You can also <strong>add records manually</strong> or perform a <strong>bulk import</strong> using the <em>Import excel</em> button above.</div>
+            </div>
+            <div class="glass-card">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+                    <h3 style="margin:0;">All Medical Records</h3>
+                    <div class="search-container" style="margin:0;max-width:320px;">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="recSearch" placeholder="Search by name, ID, or category..." oninput="filterRecords()">
+                    </div>
+                </div>
+                <div class="tbl-wrap">
+                    <table>
+                        <thead><tr><th>Teacher ID / Student ID</th><th>Full Name</th><th>Category</th><th>Year</th><th>Outlook</th><th>Gmail</th><th>Status</th><th>Action</th></tr></thead>
+                        <tbody id="masterTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SHS STUDENTS -->
+        <div id="shs-students" class="page">
+            <header style="margin-bottom:20px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                <div><h1 style="margin:0;">SHS Students</h1><p style="margin:4px 0 0;color:#666;font-size:14px;">Senior High School population categorized by strand.</p></div>
+            </header>
+            <div id="strandSummaryCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:28px;"></div>
+            <div id="strandGroupContainer"></div>
+        </div>
+
+        <!-- SHS TEACHERS -->
+        <div id="shs-teachers" class="page">
+            <header style="margin-bottom:20px;"><h1>SHS Teachers</h1></header>
+            <div class="glass-card">
+                <h3 style="margin-top:0;color:var(--sti-blue);">Active SHS Faculty</h3>
+                <div class="tbl-wrap">
+                    <table>
+                        <thead><tr><th>ID</th><th>Full Name</th><th>Position</th><th>Year</th><th>Email</th><th>Status</th><th style="text-align:center;">Action</th></tr></thead>
+                        <tbody id="shsTeachersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TERTIARY STUDENTS -->
+        <div id="college-students" class="page">
+            <header style="margin-bottom:20px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                <div><h1 style="margin:0;">Tertiary Students</h1><p style="margin:4px 0 0;color:#666;font-size:14px;">Tertiary population categorized by program/course.</p></div>
+                <div class="search-container" style="margin:0;max-width:300px;">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="courseSearch" placeholder="Search by name or ID" oninput="renderCollegeView()">
+                </div>
+            </header>
+            <div id="courseSummaryCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:28px;"></div>
+            <div id="courseGroupContainer"></div>
+        </div>
+
+        <!-- TERTIARY TEACHERS -->
+        <div id="college-teachers" class="page">
+            <header style="margin-bottom:20px;"><h1>Tertiary Teachers</h1></header>
+            <div class="glass-card">
+                <h3 style="margin-top:0;color:var(--sti-blue);">Tertiary Faculty &amp; Staff</h3>
+                <div class="tbl-wrap">
+                    <table>
+                        <thead><tr><th>ID</th><th>Full Name</th><th>Position</th><th>Year</th><th>Email</th><th>Status</th><th style="text-align:center;">Action</th></tr></thead>
+                        <tbody id="collegeTeachersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- COMPLIANCE -->
+        <div id="compliance" class="page">
+            <header style="margin-bottom:20px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                <div><h1 style="margin:0;">Compliance Tracker</h1><p style="margin:4px 0 0;color:#666;font-size:14px;">Monitor student compliance and send automated reminders</p></div>
+            </header>
+            <div class="compliance-stats">
+                <div class="comp-stat bg-blue"><small>Total Population</small><h3 id="comp-total">0</h3></div>
+                <div class="comp-stat bg-green"><small>Complete</small><h3 id="comp-complete">0</h3></div>
+                <div class="comp-stat bg-orange"><small>Pending</small><h3 id="comp-pending">0</h3></div>
+            </div>
+            <div class="glass-card" id="submissionReviewCard" style="border-left:5px solid #2ecc71;display:none;">
+                <h3 style="margin-top:0;color:#0d2b52;"><i class="fas fa-inbox" style="color:#2ecc71;margin-right:8px;"></i>Pending Submissions for Approval<span id="submissionCount" style="background:#e8f5e9;color:#2e7d32;border-radius:20px;padding:2px 12px;font-size:12px;margin-left:8px;">0</span></h3>
+                <p style="font-size:13px;color:#666;margin:0 0 14px;">Students who submitted their requirements via Gmail/Outlook. Review and approve to mark them <strong>Complete</strong>.</p>
+                <div id="submissionList"></div>
+                <p id="submissionEmpty" style="text-align:center;color:#bbb;padding:20px;font-size:13px;display:none;"><i class="fas fa-check-circle" style="font-size:24px;display:block;margin-bottom:8px;color:#2ecc71;"></i>No pending submissions to review.</p>
+            </div>
+            <div class="glass-card">
+                <h3 style="margin-top:0;"><i class="fas fa-list" style="color:var(--sti-blue);margin-right:8px;"></i>Overall Population Records</h3>
+                <div style="position:relative;margin-bottom:10px;">
+                    <i class="fas fa-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#aaa;pointer-events:none;"></i>
+                    <input type="text" id="compSearch" placeholder="Search by name or ID" oninput="filterCompliance()" style="width:100%;padding:12px 14px 12px 42px;border:1.5px solid #ddd;border-radius:10px;outline:none;font-size:14px;font-family:'Poppins',sans-serif;">
+                </div>
+                <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
+                    <select id="compStrandFilter" onchange="filterCompliance()" style="width:auto;min-width:150px;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;"><option value="">All Programs</option><option>ICT</option><option>STEM</option><option>ABM</option><option>HUMSS</option><option>TOP</option><option>BSCS</option><option>BSIT</option><option>BSBA</option><option>BAPsy</option><option>BSTM</option></select>
+                    <select id="compLevelFilter" onchange="filterCompliance()" style="width:auto;min-width:120px;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;"><option value="">All Levels</option><option value="SHS">SHS</option><option value="Tertiary">Tertiary</option></select>
+                    <select id="compTypeFilter" onchange="filterCompliance()" style="width:auto;min-width:120px;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;"><option value="">All Types</option><option value="Student">Student</option><option value="Teacher">Teacher</option></select>
+                    <select id="compStatusFilter" onchange="filterCompliance()" style="width:auto;min-width:150px;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;"><option value="">All Status</option><option value="Complete">Complete</option><option value="Pending">Pending</option></select>
+                    <select id="compViewMode" onchange="filterCompliance()" style="width:auto;min-width:230px;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;"><option value="table">Table View</option><option value="grouped">Grouped by Program, School Year, and Year</option></select>
+                </div>
+                <div class="tbl-wrap" id="compTableWrap">
+                    <table>
+                        <thead><tr><th><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--sti-blue);"></th><th>Teacher ID / Student ID</th><th>Full Name</th><th>Category</th><th>Level</th><th>Type</th><th>Year Level</th><th>Gmail</th><th>Outlook</th><th>Status</th></tr></thead>
+                        <tbody id="compTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="compGroupedView" style="display:none;"></div>
+                <div style="margin-top:12px;font-size:13px;color:#666;" id="selectedCount">0 students selected</div>
+            </div>
+            <div class="glass-card mass-broadcast-card">
+                <div class="mass-broadcast-head">
+                    <div><h3 style="margin-top:0;"><i class="fas fa-paper-plane" style="color:var(--sti-blue);margin-right:8px;"></i>Mass Broadcast Reminders</h3><p style="font-size:13px;color:#555;margin:0;">Select students above, choose your channels, write a message, and send or schedule it.</p></div>
+                    <div class="schedule-control">
+                        <label for="scheduledReminderDate"><i class="fas fa-calendar-alt"></i> Schedule</label>
+                        <input type="date" id="scheduledReminderDate">
+                        <input type="time" id="scheduledReminderTime" value="08:00">
+                    </div>
+                </div>
+                <div class="sec-title">Select Channels</div>
+                <div class="channel-list">
+                    <label class="channel-item"><input type="checkbox" id="chGmail" checked> <i class="fas fa-envelope" style="color:#ea4335;font-size:16px;"></i> Gmail</label>
+                    <label class="channel-item"><input type="checkbox" id="chOutlook" checked> <i class="fas fa-envelope-open" style="color:#0078d4;font-size:16px;"></i> Outlook</label>
+                </div>
+                <div class="sec-title">Message</div>
+                <input type="text" id="msgSubject" placeholder="✉️ Subject — e.g. Reminder: Medical Requirements" style="margin-bottom:10px;border:1.5px solid #ddd;border-radius:8px;padding:11px 13px;font-size:13px;font-family:'Poppins',sans-serif;outline:none;width:100%;" onfocus="this.style.borderColor='#0d2b52'" onblur="this.style.borderColor='#ddd'">
+                <select id="msgTemplate" onchange="applyTemplate()" style="margin-bottom:10px;">
+                    <option value="">-- Use a template or write your own --</option>
+                    <option value="Medical Requirements Reminder — STI College Bacoor Clinic||Greetings! This is from the STI College Bacoor Clinic. We noticed that your medical requirements are still incomplete. Please submit your medical certificate and laboratory results as soon as possible to update your status. Thank you!">📋 Medical Requirements Reminder</option>
+                    <option value="URGENT: Pending Medical Status — STI College Bacoor Clinic||Urgent Notice: Your compliance status is currently 'Pending'. Please visit the clinic or upload your required medical documents immediately to avoid any issues with your school records.">⚠️ Urgent — Pending Status</option>
+                    <option value="Sportsfest Medical Clearance — STI College Bacoor Clinic||In preparation for the upcoming Sportsfest, all athletes and participants are required to have a 'Complete' medical status. Please comply with your requirements immediately so you can participate in the event.">🏃 Sportsfest Clearance</option>
+                    <option value="Annual Physical Examination Schedule — STI College Bacoor Clinic||Good day! You are scheduled for your Annual Physical Examination. Please visit the clinic during your free time to update your health records. This is a mandatory requirement for all students.">🩺 Annual Check-up</option>
+                    <option value="FINAL NOTICE: Overdue Medical Requirements — STI College Bacoor Clinic||FINAL WARNING: Your medical records are now overdue. Failure to comply immediately will result in a hold on your student clearance. Please prioritize this matter today and visit the clinic.">🚨 Final Notice</option>
+                </select>
+                <textarea id="compMessage" style="height:110px;margin-bottom:15px;" placeholder="Type your reminder message here..."></textarea>
+                <div class="blast-file-drop" id="blastFileDrop" onclick="document.getElementById('blastFileInput').click()" ondrop="handleBlastFileDrop(event)" ondragover="handleBlastFileDragOver(event)" ondragleave="handleBlastFileDragLeave(event)">
+                    <input type="file" id="blastFileInput" style="display:none;" onchange="handleBlastFileSelect(event)">
+                    <div class="blast-file-icon"><i class="fas fa-paperclip"></i></div>
+                    <div><strong id="blastFileTitle">Drop a file here or click to attach</strong><p id="blastFileHint">Optional attachment for this blast reminder. Max 500 KB.</p></div>
+                    <button type="button" class="blast-file-clear" id="blastFileClear" onclick="clearBlastReminderAttachment(event)" style="display:none;"><i class="fas fa-times"></i></button>
+                </div>
+                <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                    <button class="btn btn-add" onclick="blastReminder()"><i class="fas fa-paper-plane"></i> Blast Reminder</button>
+                    <button class="btn" style="background:#0d2b52;color:white;" onclick="scheduleComplianceReminder()"><i class="fas fa-clock"></i> Schedule Reminder</button>
+                    <button class="btn" id="pendingSelectBtn" style="background:#f0f0f0;color:#333;" onclick="selectPendingOnly()"><i class="fas fa-filter"></i> Select All Pending</button>
+                    <button class="btn" style="background:#f0f0f0;color:#333;" onclick="clearMessageFields()"><i class="fas fa-trash"></i> Delete Message</button>
+                </div>
+            </div>
+            <div class="glass-card">
+                <h3 style="margin-top:0;"><i class="fas fa-history" style="color:var(--sti-blue);margin-right:8px;"></i>Reminder Log</h3>
+                <div class="tbl-wrap">
+                    <table>
+                        <thead><tr><th>Date &amp; Time</th><th>Recipients</th><th>Channels</th><th>Subject / Message</th><th>Result</th></tr></thead>
+                        <tbody id="reminderLog"></tbody>
+                    </table>
+                </div>
+                <p id="logEmpty" style="text-align:center;color:#999;font-size:13px;margin-top:10px;">No reminders sent yet.</p>
+            </div>
+        </div>
+
+        <!-- ARCHIVE -->
+        <div id="archive" class="page">
+            <header style="margin-bottom:20px;"><h1 style="margin:0;">Clinic Archive</h1></header>
+            <div class="search-container">
+                <i class="fas fa-search"></i>
+                <input type="text" id="archiveSearch" oninput="filterArchive(this.value)" placeholder="Search archived records...">
+            </div>
+            <div class="glass-card">
+                <div class="tbl-wrap">
+                    <table>
+                        <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Date Archived</th><th>Action</th></tr></thead>
+                        <tbody id="archiveTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div id="settings" class="page">
+            <header style="margin-bottom:20px;"><h1 style="margin:0;">Settings</h1></header>
+            <div class="settings-grid">
+                <div class="glass-card">
+                    <h3 style="margin-top:0;"><i class="fas fa-user-edit" style="color:var(--sti-blue);margin-right:8px;"></i>Update Profile</h3>
+                    <div style="text-align:center;margin-bottom:20px;">
+                        <div class="avatar-circle" id="settings-avatar" style="width:80px;height:80px;margin:0 auto 10px;font-size:24px;">NC</div>
+                        <input type="file" id="profileImg" style="display:none" accept="image/*" onchange="uploadPhoto(event)">
+                        <button class="btn" onclick="document.getElementById('profileImg').click()" style="font-size:11px;background:#eee;color:#333;"><i class="fas fa-camera"></i> Change Photo</button>
+                    </div>
+                    <label>Nurse Name</label><input type="text" id="nurseNicknameInput" style="margin-bottom:12px;" placeholder="Enter your name">
+                    <label>Position / Role</label><input type="text" id="nursePositionInput" style="margin-bottom:12px;" placeholder="Clinic Nurse" readonly>
+                    <label>Work Email</label><input type="email" id="emailInput" style="margin-bottom:12px;">
+                    <button class="btn btn-add" onclick="saveSettings()" style="width:100%;justify-content:center;"><i class="fas fa-save"></i> Save Profile</button>
+                </div>
+                <div class="glass-card">
+                    <h3 style="margin-top:0;"><i class="fas fa-shield-alt" style="color:var(--sti-blue);margin-right:8px;"></i>Security</h3>
+                    <label>Current Password</label>
+                    <div class="pass-wrap" style="margin-bottom:12px;"><input type="password" id="currentPassword"><button class="toggle-pass" type="button" onclick="togglePass('currentPassword',this)"><i class="fas fa-eye"></i></button></div>
+                    <label>New Password</label>
+                    <div class="pass-wrap" style="margin-bottom:12px;"><input type="password" id="newPassword"><button class="toggle-pass" type="button" onclick="togglePass('newPassword',this)"><i class="fas fa-eye"></i></button></div>
+                    <label>Confirm New Password</label>
+                    <div class="pass-wrap" style="margin-bottom:20px;"><input type="password" id="confirmPassword"><button class="toggle-pass" type="button" onclick="togglePass('confirmPassword',this)"><i class="fas fa-eye"></i></button></div>
+                    <button class="btn" style="background:var(--danger);color:white;width:100%;justify-content:center;" onclick="updateSecurity()"><i class="fas fa-lock"></i> Update Security Info</button>
+                </div>
+                <div class="glass-card">
+                    <h3 style="margin-top:0;"><i class="fas fa-sliders-h" style="color:var(--sti-blue);margin-right:8px;"></i>Preferences</h3>
+                    <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;cursor:pointer;font-weight:500;font-size:14px;"><input type="checkbox" id="darkModeToggle" style="width:auto;" onchange="applyDarkMode(this.checked)"> <i class="fas fa-moon"></i> Enable Dark Mode</label>
+                    <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;cursor:pointer;font-weight:500;font-size:14px;"><input type="checkbox" id="notifPending" style="width:auto;"> Notify on new Pending records</label>
+                    <label style="display:flex;align-items:center;gap:8px;margin-bottom:20px;cursor:pointer;font-weight:500;font-size:14px;"><input type="checkbox" id="notifArchive" checked style="width:auto;"> Confirm before archiving</label>
+                    <div class="sec-title">Default Chart Type</div>
+                    <select id="defaultChart" style="margin-bottom:20px;"><option value="bar">Bar Chart</option><option value="doughnut">Doughnut Chart</option><option value="pie">Pie Chart</option></select>
+                    <button class="btn btn-add" onclick="savePreferences()" style="width:100%;justify-content:center;"><i class="fas fa-save"></i> Save Preferences</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- NOTIFICATION BELL -->
+    <div class="hs-bell-wrap" id="bellWrap">
+        <button class="hs-bell-btn" id="bellBtn" onclick="toggleNotifPanel()" title="Notifications">
+            <i class="fas fa-bell hs-bell-icon"></i>
+            <span class="hs-bell-badge" id="bellBadge">0</span>
+        </button>
+        <div class="hs-notif-panel" id="notifPanel">
+            <div class="hs-notif-head">
+                <div class="hs-notif-head-icon"><i class="fas fa-bell" style="color:#ffcb05;font-size:15px;"></i></div>
+                <div class="hs-notif-title"><strong>Notifications</strong><span>Submissions &amp; Pending Students</span></div>
+                <span class="hs-notif-badge" id="notifCount">0</span>
+            </div>
+            <div class="hs-notif-scroll" id="notifList">
+                <div class="hs-notif-empty"><i class="fas fa-check-circle"></i><p>All students complete!<br>No pending submissions.</p></div>
+            </div>
+            <div class="hs-notif-foot">
+                <button class="hs-notif-foot-btn" onclick="showPage('compliance');toggleNotifPanel();"><i class="fas fa-paper-plane"></i> Send Reminders</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- IMPORT MODAL -->
+    <div class="import-modal-overlay" id="importModalOverlay">
+        <div class="import-modal-box">
+            <div class="import-modal-head">
+                <div><h3><i class="fas fa-file-import" style="margin-right:8px;"></i>Import Medical Records</h3><p>Add records manually or bulk-import via Excel / CSV</p></div>
+                <button class="import-modal-close" onclick="closeImportModal()">✕</button>
+            </div>
+            <div class="import-tabs">
+                <button class="import-tab active" id="itab-manual" onclick="switchImportTab('manual')"><i class="fas fa-user-plus"></i> Manual Entry</button>
+                <button class="import-tab" id="itab-excel" onclick="switchImportTab('excel')"><i class="fas fa-file-excel"></i> Excel / CSV Import</button>
+            </div>
+            <div class="import-body">
+                <div class="import-panel active" id="ipanel-manual">
+                    <div class="import-info-bar"><i class="fas fa-info-circle"></i> Fill in the student's details below and click <strong>Add to List</strong>. You can add multiple students before saving.</div>
+                    <div class="manual-form-grid">
+                        <div class="mfield"><label id="impIdLabel">Teacher ID / Student ID *</label><input type="text" id="imp_id" placeholder="e.g. 2024001" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-filter="numbers"></div>
+                        <div class="mfield"><label>Full Name *</label><input type="text" id="imp_name" placeholder="Last First Middle" autocomplete="off" data-filter="letters-spaces"></div>
+                        <div class="mfield"><label>Level *</label><select id="imp_level" onchange="toggleImpFields()"><option value="SHS">SHS</option><option value="Tertiary">Tertiary</option></select></div>
+                        <div class="mfield"><label>Type *</label><select id="imp_type" onchange="toggleImpFields()"><option value="Student">Student</option><option value="Teacher">Teacher</option></select></div>
+                        <div class="mfield" id="impStrandGroup"><label>Strand *</label><select id="imp_strand"><option value="">-- Select --</option><option>ICT</option><option>STEM</option><option>ABM</option><option>HUMSS</option><option>TOP</option></select></div>
+                        <div class="mfield" id="impCourseGroup" style="display:none;"><label>Course *</label><select id="imp_course"><option value="">-- Select --</option><option value="BSCS">BSCS</option><option value="BSIT">BSIT</option><option value="BSBA">BSBA</option><option value="BAPsy">BAPsy</option><option value="BSTM">BSTM</option></select></div>
+                        <div class="mfield"><label id="impYearLabel">Year Level</label><select id="imp_year"><option value="">-- Select --</option><option>Grade 11</option><option>Grade 12</option></select></div>
+                        <div class="mfield" id="impSectionGroup"><label>Section</label><input type="text" id="imp_section" placeholder="e.g. ICT-A"></div>
+                        <div class="mfield"><label>School Year</label><input type="text" id="imp_sy" placeholder="2026-2027" maxlength="9" inputmode="text" autocomplete="off" data-filter="school-year"></div>
+                        <div class="mfield"><label>STI Outlook Email</label><input type="email" id="imp_outlook" placeholder="student@sti.edu.ph"></div>
+                        <div class="mfield"><label>Personal Gmail</label><input type="email" id="imp_gmail" placeholder="personal@gmail.com"></div>
+                        <div class="mfield"><label>Emergency Contact</label><input type="text" id="imp_emergency" placeholder="Name / phone number"></div>
+                        <div class="mfield"><label>Allergies</label><input type="text" id="imp_allergies" placeholder="None" autocomplete="off" data-filter="letters-spaces"></div>
+                        <div class="mfield span-2"><label>Mental State / Notes</label><input type="text" id="imp_mental_state" placeholder="None recorded stable under observation" autocomplete="off" data-filter="letters-spaces"></div>
+                        <div class="mfield span-2"><label>Compliance Status</label><select id="imp_status"><option value="Pending">Pending — Has NOT submitted</option><option value="Complete">Complete — Requirements submitted</option></select></div>
+                    </div>
+                    <button class="btn btn-add" onclick="addManualToImportQueue()"><i class="fas fa-plus"></i> Add to List</button>
+                    <div id="manualQueueWrap" style="display:none;margin-top:16px;">
+                        <div style="font-size:13px;font-weight:700;color:#0d2b52;margin-bottom:8px;">Records to be saved (<span id="manualQueueCount">0</span>):</div>
+                        <div class="import-preview-table">
+                            <table>
+                                <thead><tr><th>#</th><th>Teacher ID / Student ID</th><th>Name</th><th>Category</th><th>Year</th><th>Level</th><th>Status</th><th></th></tr></thead>
+                                <tbody id="manualQueueBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="import-panel" id="ipanel-excel">
+                    <div style="margin-bottom:14px;"><button class="template-download-btn" onclick="downloadTemplate()"><i class="fas fa-download"></i> Download Import Template (.xlsx)</button></div>
+                    <div class="drop-zone" id="dropZone" onclick="document.getElementById('excelFileInput').click()" ondrop="handleFileDrop(event)" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')">
+                        <div class="drop-zone-icon">📂</div>
+                        <h4>Drop your Excel / CSV file here</h4>
+                        <p>or click to browse files</p>
+                        <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileSelect(event)">
+                        <div id="dropZoneFileName" style="font-size:13px;font-weight:600;color:#0d2b52;margin-top:8px;"></div>
+                    </div>
+                    <div id="excelPreviewWrap" style="display:none;margin-top:16px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                            <div style="font-size:13px;font-weight:700;color:#0d2b52;">Preview (<span id="excelRowCount">0</span> records found):</div>
+                            <button onclick="clearExcelFile()" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:12px;font-weight:600;font-family:'Poppins',sans-serif;"><i class="fas fa-times"></i> Clear</button>
+                        </div>
+                        <div class="import-preview-table">
+                            <table>
+                                <thead><tr><th>#</th><th>Teacher ID / Student ID</th><th>Name</th><th>Strand</th><th>Year</th><th>Section</th><th>Outlook</th><th>Gmail</th><th>Status</th></tr></thead>
+                                <tbody id="excelPreviewBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="excelErrorWrap" style="display:none;background:#fde8e8;border:1px solid #f5c6c2;border-radius:10px;padding:12px 14px;margin-top:12px;font-size:12px;color:#c0392b;"></div>
+                </div>
+            </div>
+            <div class="import-footer">
+                <span id="importResultMsg" style="font-size:12px;color:#888;flex:1;"></span>
+                <button class="btn" style="background:#eee;color:#333;" onclick="closeImportModal()">Cancel</button>
+                <button class="btn btn-add" onclick="saveImportedStudents()" id="importSaveBtn" style="min-width:160px;"><i class="fas fa-save"></i> Save All Records</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRINT MODAL -->
+    <div class="print-modal-overlay" id="printModalOverlay">
+        <div class="print-modal-box">
+            <div            <div class="print-modal-head">
+                <div class="print-modal-head-icon">🖨️</div>
+                <div><h3>Print Report</h3><p>Choose what to print — hard copy or save as PDF</p></div>
+                <button class="print-modal-close" onclick="closePrintModal()">✕</button>
+            </div>
+            <div class="print-modal-body">
+                <div class="print-opt-group">
+                    <span class="print-opt-label">📋 Filter Population</span>
+                    <div class="print-radio-grid">
+                        <label class="print-radio-item" id="popt-all"><input type="radio" name="printFilter" value="all" checked onchange="updatePrintPreview()"> Overall List</label>
+                        <label class="print-radio-item" id="popt-pending"><input type="radio" name="printFilter" value="pending" onchange="updatePrintPreview()"> ❌ Pendings Only</label>
+                        <label class="print-radio-item" id="popt-complete"><input type="radio" name="printFilter" value="complete" onchange="updatePrintPreview()"> ✅ Completes Only</label>
+                        <label class="print-radio-item" id="popt-shs"><input type="radio" name="printFilter" value="shs" onchange="updatePrintPreview()"> SHS (S &amp; T)</label>
+                        <label class="print-radio-item" id="popt-tertiary"><input type="radio" name="printFilter" value="tertiary" onchange="updatePrintPreview()"> Tertiary (S &amp; T)</label>
+                    </div>
+                </div>
+                <div class="print-preview-bar" id="printPreviewBar">
+                    <i class="fas fa-users" style="color:#0d2b52;"></i>
+                    <span id="printPreviewText">Preparing overall list...</span>
+                </div>
+                <div class="print-opt-group" style="margin-bottom:0;">
+                    <span class="print-opt-label">🗂️ Report Type</span>
+                    <select class="print-select" id="printReportType"><option value="compliance">Overall Compliance Summary</option><option value="fulllist">Overall Population Health Records</option></select>
+                </div>
+            </div>
+            <div class="print-modal-foot">
+                <button class="print-btn-pdf" onclick="doPrint('pdf')"><i class="fas fa-file-pdf"></i> Save as PDF <span style="opacity:.7;font-size:11px;">(Soft Copy)</span></button>
+                <button class="print-btn-hard" onclick="doPrint('print')"><i class="fas fa-print"></i> Print <span style="opacity:.7;font-size:11px;">(Hard Copy)</span></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="hs-print-area" style="display:none;"></div>
+
+    <!-- VIEW PROFILE MODAL -->
+    <div class="modal-overlay" id="profileModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10001;align-items:center;justify-content:center;">
+        <div class="glass-card" style="width:min(500px,90vw);padding:30px;position:relative;background:white;">
+            <button onclick="closeProfileModal()" style="position:absolute;top:15px;right:15px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+            <div style="text-align:center;margin-bottom:20px;">
+                <div id="profAvatar" style="width:80px;height:80px;border-radius:50%;background:#0d2b52;color:white;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700;margin:0 auto 10px;"></div>
+                <h2 id="profName" style="margin:0;color:#0d2b52;"></h2>
+                <p id="profRole" style="color:#666;font-size:14px;margin:5px 0;"></p>
+            </div>
+            <div id="profDetails" style="font-size:14px;line-height:2;"></div>
+            <button class="btn btn-add" style="width:100%;margin-top:20px;" onclick="closeProfileModal()">Close</button>
+        </div>
+    </div>
+
+</div><!-- end #app-dashboard -->
+
+
+<!-- ================================================================
+     PAGE ROUTER
+     ================================================================ -->
+<script>
+(function () {
+    var login = document.getElementById('app-login');
+    var reset = document.getElementById('app-reset');
+    var dash  = document.getElementById('app-dashboard');
+
+    var authStyle = 'display:flex;align-items:center;justify-content:center;min-height:100vh;';
+
+    if (HS_PAGE === 'reset') {
+        document.body.setAttribute('style', authStyle + 'background:linear-gradient(135deg,#f5f7fa 0%,#c3cfe2 100%);');
+        reset.style.display = 'contents';
+    } else if (HS_PAGE === 'dashboard') {
+        document.body.setAttribute('style', 'margin:0;background:linear-gradient(135deg,#f5f7fa 0%,#c3cfe2 100%);display:flex;height:100vh;overflow:hidden;');
+        dash.style.display = 'contents';
+    } else {
+        document.body.setAttribute('style', authStyle + 'background:linear-gradient(135deg,#f5f7fa 0%,#c3cfe2 100%);overflow-x:hidden;');
+        login.style.display = 'contents';
+    }
+
+    window.switchTab = function (tab) {
+        var lf = document.getElementById('form-login');
+        var rf = document.getElementById('form-register');
+        if (tab === 'login') { lf.classList.add('active'); rf.classList.remove('active'); }
+        else                  { lf.classList.remove('active'); rf.classList.add('active'); }
+    };
+
+    window.goToLogin = function () {
+        window.location.href = window.location.pathname;
+    };
+
+    window.updatePassStrength = function () {
+        var val  = (document.getElementById('regPassword') || {}).value || '';
+        var bar  = document.getElementById('passStrengthBar');
+        var lbl  = document.getElementById('passStrengthLabel');
+        var hint = document.getElementById('passWeakHint');
+        if (!bar) return;
+        var score = calcPassScore(val);
+        var lvl   = PASS_LEVELS[score];
+        bar.style.width      = val.length === 0 ? '0%' : lvl.pct;
+        bar.style.background = lvl.color;
+        if (lbl)  { lbl.textContent = val.length === 0 ? '' : lvl.label; lbl.style.color = lvl.color; }
+        if (hint) { hint.style.display = (val.length > 0 && score < 3) ? 'block' : 'none'; }
+    };
+
+    window.doRegister = function () {
+        var name     = (document.getElementById('regName').value    || '').trim();
+        var position =  document.getElementById('regPosition').value || '';
+        var email    = (document.getElementById('regEmail').value   || '').trim();
+        var password =  document.getElementById('regPassword').value || '';
+        var confirm  =  document.getElementById('regConfirm').value  || '';
+        var errEl    =  document.getElementById('regError');
+        var errMsg   =  document.getElementById('regErrorMsg');
+        var sucEl    =  document.getElementById('regSuccess');
+        if (errEl) errEl.style.display = 'none';
+        if (sucEl) sucEl.style.display = 'none';
+        if (!name || !position || !email || !password) { errMsg.textContent = 'Please fill all required fields.'; errEl.style.display = 'flex'; return; }
+        if (password !== confirm) { errMsg.textContent = 'Passwords do not match.'; errEl.style.display = 'flex'; return; }
+        if (calcPassScore(password) < 3) { errMsg.textContent = 'Password is too weak.'; errEl.style.display = 'flex'; return; }
+        var btn = document.getElementById('registerBtn');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...'; }
+        var fd = new FormData();
+        fd.append('regName', name); fd.append('regPosition', position);
+        fd.append('regEmail', email); fd.append('regPassword', password);
+        fetch('../PHP%20DATABASE/register%20process.php', { method:'POST', body:fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'success') { if (sucEl) sucEl.style.display = 'flex'; setTimeout(() => switchTab('login'), 1500); }
+            else { errMsg.textContent = data.message || 'Registration failed.'; if (errEl) errEl.style.display = 'flex'; }
+        })
+        .catch(() => { errMsg.textContent = 'Server connection failed.'; if (errEl) errEl.style.display = 'flex'; })
+        .finally(() => { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account'; } toggleRegisterButton(); });
+    };
+
+    if (HS_PAGE === 'reset') {
+        var _activeToken = null;
+        var params = new URLSearchParams(window.location.search);
+        var token  = params.get('reset');
+
+        function _showState(s) {
+            ['stateInvalid','stateExpired','stateForm','stateSuccess'].forEach(function (id) {
+                var el = document.getElementById(id); if (el) el.classList.remove('active');
+            });
+            var map = { invalid:'stateInvalid', expired:'stateExpired', form:'stateForm', success:'stateSuccess' };
+            var t = document.getElementById(map[s]); if (t) t.classList.add('active');
+        }
+
+        if (!token) { _showState('invalid'); }
+        else {
+            var fd2 = new FormData(); fd2.append('token', token);
+            fetch('../PHP%20DATABASE/validate_reset_token.php', { method:'POST', body:fd2 })
+            .then(r => r.json())
+            .then(data => { if (data.status === 'success') { _activeToken = token; _showState('form'); } else { _showState('invalid'); } })
+            .catch(() => _showState('invalid'));
+        }
+
+        window.doResetPassword = function () {
+            var np  = (document.getElementById('resetNewPass')    || {}).value || '';
+            var cp  = (document.getElementById('resetConfirmPass') || {}).value || '';
+            var al  =  document.getElementById('resetAlert');
+            var alm =  document.getElementById('resetAlertMsg');
+            function sa(m) { alm.textContent = m; al.style.display = 'flex'; }
+            al.style.display = 'none';
+            if (np.length < 6) { sa('Password must be at least 6 characters.'); return; }
+            if (np !== cp)     { sa('Passwords do not match.'); return; }
+            if (!_activeToken) { sa('Reset session expired. Please request a new reset link.'); return; }
+            var fd3 = new FormData(); fd3.append('token', _activeToken); fd3.append('newPassword', np);
+            fetch('../PHP%20DATABASE/update_user_password.php', { method:'POST', body:fd3 })
+            .then(r => r.json())
+            .then(data => { if (data.status === 'success') { _showState('success'); setTimeout(goToLogin, 2500); } else { sa('❌ ' + data.message); } })
+            .catch(() => sa('❌ Server connection failed.'));
+        };
+    }
+})();
+</script>
+
+<!-- Single Combined Script -->
+<script src="../JAVA%20SCRIPT/script.js"></script>
+
+</body>
+</html>
+
+
+
