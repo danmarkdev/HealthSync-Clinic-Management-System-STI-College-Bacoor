@@ -36,7 +36,7 @@ window.addEventListener('load', function () {
 
     // Already logged in → go to dashboard
     if (sessionStorage.getItem('userSession')) {
-        window.location.href = 'clinic%20dashboard.html';
+        window.location.href = 'index.html';
         return;
     }
 });
@@ -268,7 +268,7 @@ function completeLoginSession(account, remember, email) {
     // Session is only created here AFTER OTP verification
     sessionStorage.setItem('userSession', JSON.stringify(session));
     document.getElementById('loginSuccess').style.display = 'flex';
-    setTimeout(function () { window.location.href = 'clinic%20dashboard.html'; }, 1000);
+    setTimeout(function () { window.location.href = 'index.html'; }, 1000);
 }
 
 function doLogin() {
@@ -559,7 +559,7 @@ function doResetPassword() {
                 msgEl.style.border = '1px solid #b2e4c9';
             }
             // Siguradong babalik sa login tab
-            setTimeout(() => { window.location.href = 'clinic%20registration.html'; }, 2000);
+            setTimeout(() => { window.location.href = 'index.html'; }, 2000);
         } else {
             showErr('❌ ' + data.message);
         }
@@ -755,7 +755,7 @@ function hideAlert() {
 
 // ── Go back to login ───────────────────────────────────────
 function goToLogin() {
-    window.location.href = 'clinic%20registration.html';
+    window.location.href = 'index.html';
 }
 
 /* ============================================================
@@ -777,7 +777,7 @@ function goToLogin() {
 // ── Auth guard ─────────────────────────────────────────────
 (function () {
     var session = sessionStorage.getItem('userSession');
-    if (!session) window.location.replace('clinic%20registration.html');
+    if (!session) window.location.replace('index.html');
 })();
 
 // ── Sign out ─────────────────────────────────────────────────
@@ -785,7 +785,7 @@ function signOut() {
     if (!confirm('Sign out of HealthSync?')) return;
     sessionStorage.clear();
     // window.location.replace removes the dashboard from browser history
-    window.location.replace('clinic%20registration.html');
+    window.location.replace('index.html');
 }
 
 // ── Initialization Trigger ──────────────────────────────────
@@ -793,7 +793,7 @@ let isDashboardInitialized = false;
 function triggerInit() {
     const session = sessionStorage.getItem('userSession');
     if (!session) {
-        window.location.replace('clinic%20registration.html');
+        window.location.replace('index.html');
         return;
     }
     if (!isDashboardInitialized) {
